@@ -1,6 +1,9 @@
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage
+import os
 
 load_dotenv()
 
@@ -35,6 +38,45 @@ print(f"User Query: {query}")
 print("--- Context ---")
 for i, doc in enumerate(relevant_docs, 1):
     print(f"Document {i}:\n{doc.page_content}\n")
+
+
+import os
+print("KEY:", os.getenv("OPENROUTER_API_KEY"))
+# Query for LLM
+combined_input = f"""Based on the following documents, please answer this question: {query}
+
+Documents:
+{chr(10).join([doc.page_content for doc in relevant_docs])}
+
+Please provide a concise answer based on the information from the documents. If the answer is not explicitly stated, please infer it based on the context provided.
+"""
+
+# Create an LLM API inference via OpenRouter
+# OpenRouter is fully compatible with the OpenAI SDK format —
+# just point base_url at OpenRouter and pass your OPENROUTER_API_KEY
+model = ChatOpenAI(
+    model="openrouter/free",
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY")
+)
+
+# Define the messages for LLM
+messages = [
+    SystemMessage(content="You are a helpful assistant that answers questions based on provided documents."),
+    HumanMessage(content=combined_input)
+]
+
+# Invoking the LLM API
+result = model.invoke(messages)
+
+# Display the answer
+print("\n--- LLM Answer ---")
+
+print("FULL RESULT:")
+print(result)
+
+print("\nAnswer:")
+print(result.content)
 
 
 # Synthetic Questions:
